@@ -43,33 +43,42 @@ def main():
         with open(options.file, 'r') as previous_file:
             previous_data = json.load(previous_file)
 
-    # If the previous data was empty, grab all data
-    # Process list from previous data, If I have previously run this script, let's just check new actions that have run since then
-    # Else, I will check them all
-    url = "http://" + options.host + ":" + options.port + "/oozie/v1/job/" + coordID + '?show=info'
+    # Find if there is existing data for the coordinator and pop it out so we can work with it
+    existing_coord = {}
+    index = 0
     for coord in previous_data:
         if coord['id'] == coordID:
-            url = "http://" + options.host + ":" + options.port + "/oozie/v1/job/" + coordID + '?show=info&offset=' + str(coord['lastActionNumber'])
+            existing_coord = previous_data.pop(0)
+        else:
+            index = index + 1
+
+    # If the previous data was empty, grab all data
+    # If there was previous data, let's just get the new data
+    url = "http://" + options.host + ":" + options.port + "/oozie/v1/job/" + coordID + '?show=info'
+    if existing_coord:
+        url = "http://" + options.host + ":" + options.port + "/oozie/v1/job/" + coordID + '?show=info&offset=' + str(coord['lastActionNumber'])
 
     # Get JSON from Oozie
     response = urllib.urlopen(url)
     data = json.loads(response.read())
 
+    # Grab the actionNumber of the last action taken by the coordinator
+    lastActionNumber = data['actions'][-1]['actionNumber']
+
+    # If there was previous data, only count a new action as bad.  Prevents constant alerts if last encountered action FAILED
     # Cycle through JSON looking for items that are NOT SUCCEEDED and count them
     bad_action = 0
-    for action in data['actions']:
-        if action['status'] != "SUCCEEDED":
-            bad_action = bad_action + 1
-
-    # Now find the last existing 'actionNumber' and add it to our previous_data
-    # If the ID is new, append this new id and number to the previous_data
-    lastActionNumber = data['actions'][-1]['actionNumber']
-    for coord in previous_data:
-        if coord['id'] == coordID:
-            coord['lastActionNumber'] = lastActionNumber
-            break
+    if existing_coord:
+        for action in data['actions']:
+            if (action['status'] != "SUCCEEDED") and (existing_coord['lastActionNumber'] != lastActionNumber):
+                bad_action = bad_action + 1
     else:
-        previous_data.append({ 'id' : coordID, 'lastActionNumber' : lastActionNumber })
+        for action in data['actions']:
+            if (action['status'] != "SUCCEEDED"):
+                bad_action = bad_action + 1
+
+    # Append data back into previous data
+    previous_data.append({ 'id' : coordID, 'lastActionNumber' : lastActionNumber })
 
     # Write previous_data to file as JSON
     with open(options.file, 'w') as previous_file: 
@@ -77,15 +86,14 @@ def main():
 
     # Exit as either CRITICAL, WARNING, or OK
     if options.critical <= bad_action:
-        print "CRITICAL: " + options.host + " had " + str(bad_action) + " bad actions."
+        print "CRITICAL: " + options.host + " had " + str(bad_action) + " new, bad actions."
         sys.exit(2)
     elif options.warning <= bad_action:
-        print "WARNING: " + options.host + " had " + str(bad_action) + " bad actions."
+        print "WARNING: " + options.host + " had " + str(bad_action) + " new, bad actions."
         sys.exit(1)
     else:
-        print "OK: " + options.host + " had " + str(bad_action) + " bad actions."
+        print "OK: " + options.host + " had " + str(bad_action) + " new, bad actions."
         sys.exit(0)
-
 
 
 if len(arguments) > 0:
