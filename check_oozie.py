@@ -63,7 +63,11 @@ def main():
     data = json.loads(response.read())
 
     # Grab the actionNumber of the last action taken by the coordinator
-    lastActionNumber = data['actions'][-1]['actionNumber']
+    if data:
+        lastActionNumber = data['actions'][-1]['actionNumber']
+    else:
+        print "No DATA!!"
+        sys.exit(256)
 
     # If there was previous data, only count a new action as bad.  Prevents constant alerts if last encountered action FAILED
     # Cycle through JSON looking for items that are NOT SUCCEEDED and count them
