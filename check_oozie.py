@@ -48,7 +48,8 @@ def main():
     index = 0
     for coord in previous_data:
         if coord['id'] == coordID:
-            existing_coord = previous_data.pop(0)
+            existing_coord = previous_data.pop(index)
+            break
         else:
             index = index + 1
 
