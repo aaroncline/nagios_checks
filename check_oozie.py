@@ -37,6 +37,7 @@ def main():
 
     coordID = arguments[0]
     previous_data = []
+    accepted_status = [ "SUCCEEDED", "WAITING" ]
     
     # Read in previous data if exists
     if os.path.isfile(options.file):
@@ -76,12 +77,12 @@ def main():
     last_action_status = ""
     if existing_coord:
         for action in data['actions']:
-            if (action['status'] != "SUCCEEDED") and (existing_coord['lastActionNumber'] != lastActionNumber):
+            if (action['status'] not in accepted_status) and (existing_coord['lastActionNumber'] != lastActionNumber):
                 bad_action = bad_action + 1
                 last_action_status = action['status']
     else:
         for action in data['actions']:
-            if (action['status'] != "SUCCEEDED"):
+            if (action['status'] not in accepted_status):
                 bad_action = bad_action + 1
                 last_action_status = action['status']
 
