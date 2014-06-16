@@ -73,14 +73,17 @@ def main():
     # If there was previous data, only count a new action as bad.  Prevents constant alerts if last encountered action FAILED
     # Cycle through JSON looking for items that are NOT SUCCEEDED and count them
     bad_action = 0
+    last_action_status = ""
     if existing_coord:
         for action in data['actions']:
             if (action['status'] != "SUCCEEDED") and (existing_coord['lastActionNumber'] != lastActionNumber):
                 bad_action = bad_action + 1
+                last_action_status = action['status']
     else:
         for action in data['actions']:
             if (action['status'] != "SUCCEEDED"):
                 bad_action = bad_action + 1
+                last_action_status = action['status']
 
     # Append data back into previous data
     previous_data.append({ 'id' : coordID, 'lastActionNumber' : lastActionNumber })
@@ -91,10 +94,10 @@ def main():
 
     # Exit as either CRITICAL, WARNING, or OK
     if options.critical <= bad_action:
-        print "CRITICAL: " + options.host + " had " + str(bad_action) + " new, bad actions."
+        print "CRITICAL: " + options.host + " had " + str(bad_action) + " new, bad actions. Last action " + last_action_status
         sys.exit(2)
     elif options.warning <= bad_action:
-        print "WARNING: " + options.host + " had " + str(bad_action) + " new, bad actions."
+        print "WARNING: " + options.host + " had " + str(bad_action) + " new, bad actions.  Last action " + last_action_status
         sys.exit(1)
     else:
         print "OK: " + options.host + " had " + str(bad_action) + " new, bad actions."
