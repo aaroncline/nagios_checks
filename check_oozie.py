@@ -37,7 +37,7 @@ def main():
 
     coordID = arguments[0]
     previous_data = []
-    accepted_status = [ "SUCCEEDED", "WAITING" ]
+    accepted_status = [ "SUCCEEDED", "WAITING", "RUNNING" ]
     
     # Read in previous data if exists
     if os.path.isfile(options.file):
