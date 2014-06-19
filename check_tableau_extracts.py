@@ -22,6 +22,10 @@ parser.add_option( "-D", "--database", type="string",
                    help="database name to connect to tableau postgresql, default is workgroup",
                    dest="database",
                    default="workgroup" )
+parser.add_option( "-t", "--type", type="string",
+                   help="type of extract 'workbook or datasource', default is workbook",
+                   dest="type",
+                   default="workbook" )
 parser.add_option( "-U", "--user", type="string",
                    help="user to connect to tableau postgresql, default is tableau",
                    dest="user",
@@ -53,12 +57,23 @@ parser.add_option( "-d", "--debug", action="store_true",
 
 options, arguments = parser.parse_args()
 
-def get_events(cur, datasource, time):
-    select = "SELECT created_at, details FROM historical_events INNER JOIN hist_datasources \
+def get_events(cur, datasource, time, type):
+    select = ""
+    if type == "datasource":
+        select = "SELECT created_at, details FROM historical_events INNER JOIN hist_datasources \
             ON historical_events.hist_datasource_id = hist_datasources.id WHERE hist_datasources.name \
             = '" + datasource + "' AND created_at > '" + \
             str(datetime.datetime.utcnow() - datetime.timedelta(minutes = time)) + "' \
             AND ( historical_event_type_id = 133 OR historical_event_type_id = 132 ) ORDER BY created_at DESC;" 
+    elif type == "workbook":
+        select = "SELECT created_at, details FROM historical_events INNER JOIN hist_workbooks \
+            ON historical_events.hist_workbook_id = hist_workbooks.id WHERE hist_workbooks.name \
+            = '" + datasource + "' AND created_at > '" + \
+            str(datetime.datetime.utcnow() - datetime.timedelta(minutes = time)) + "' \
+            AND ( historical_event_type_id = 133 OR historical_event_type_id = 132 ) ORDER BY created_at DESC;" 
+    else:
+        print "Type is not 'workbook' or 'datasource'"
+        sys.exit(256)
     cur.execute(select)
     data = cur.fetchall()
     return data
@@ -101,8 +116,8 @@ def main():
 
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
    
-    select_warn = get_events(cur, tableau_datasource_name, options.warning)
-    select_crit = get_events(cur, tableau_datasource_name, options.critical)
+    select_warn = get_events(cur, tableau_datasource_name, options.warning, options.type)
+    select_crit = get_events(cur, tableau_datasource_name, options.critical, options.type)
 
     rows = None
 
