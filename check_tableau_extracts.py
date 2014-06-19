@@ -65,7 +65,6 @@ def get_events(cur, datasource, time):
 
 def get_rows_updated(data):
     for row in data:
-        print "Timezone " + str(row[0].tzinfo) + "   TIME " + str(row[0])
         matched = re.match( r'.*Rows inserted: (\d+).*', row[1])
         if matched: return int(matched.group(1))
         break
@@ -101,7 +100,6 @@ def main():
         sys.exit(256)
 
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cur.execute("SET TIME ZONE 'America/Chicago';")
    
     select_warn = get_events(cur, tableau_datasource_name, options.warning)
     select_crit = get_events(cur, tableau_datasource_name, options.critical)
