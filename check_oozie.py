@@ -77,14 +77,14 @@ def main():
     last_action_status = ""
     if existing_coord:
         for action in data['actions']:
+            last_action_status = action['status']
             if (action['status'] not in accepted_status) and (existing_coord['lastActionNumber'] != lastActionNumber):
                 bad_action = bad_action + 1
-                last_action_status = action['status']
     else:
         for action in data['actions']:
+            last_action_status = action['status']
             if (action['status'] not in accepted_status):
                 bad_action = bad_action + 1
-                last_action_status = action['status']
 
     # Append data back into previous data
     previous_data.append({ 'id' : coordID, 'lastActionNumber' : lastActionNumber })
@@ -101,7 +101,7 @@ def main():
         print "WARNING: " + options.host + " had " + str(bad_action) + " new, bad actions.  Last action " + last_action_status
         sys.exit(1)
     else:
-        print "OK: " + options.host + " had " + str(bad_action) + " new, bad actions."
+        print "OK: " + options.host + " had " + str(bad_action) + " new, bad actions.  Last action " + last_action_status
         sys.exit(0)
 
 
