@@ -77,6 +77,11 @@ def main():
     # Cycle through JSON looking for items that are NOT SUCCEEDED and count them
     warning = None
     ok = None
+
+    if data['status'] != 'RUNNING':
+        print "CRITICAL: Coordinator is no longer running"
+        sys.exit(1)
+
     last_action_status = data['actions'][-1]['status']
     if last_action_status in warn_status:
         warning = 1
