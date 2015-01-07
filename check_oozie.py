@@ -66,6 +66,16 @@ def main():
     response = urllib.urlopen(url)
     data = json.loads(response.read())
 
+    #  If the Coord is not RUNNING or is in PREP, exit as specified.
+
+    if data['status'] == 'PREP':
+        print "WARNING: Coordinator is PREP"
+        sys.exit(1)
+
+    if data['status'] != 'RUNNING':
+        print "CRITICAL: Coordinator is no longer running"
+        sys.exit(2)
+
     # Grab the actionNumber of the last action taken by the coordinator
     if data:
         lastActionNumber = data['actions'][-1]['actionNumber']
@@ -77,11 +87,6 @@ def main():
     # Cycle through JSON looking for items that are NOT SUCCEEDED and count them
     warning = None
     ok = None
-
-    if data['status'] != 'RUNNING':
-        print "CRITICAL: Coordinator is no longer running"
-        sys.exit(1)
-
     last_action_status = data['actions'][-1]['status']
     if last_action_status in warn_status:
         warning = 1
