@@ -37,7 +37,9 @@ def main():
 
     coordID = arguments[0]
     previous_data = []
-    accepted_status = [ "SUCCEEDED", "WAITING", "RUNNING" ]
+    ok_status = [ "SUCCEEDED", "RUNNING" ]
+    warn_status = [ "WAITING" ]
+
     
     # Read in previous data if exists
     if os.path.isfile(options.file):
@@ -64,6 +66,16 @@ def main():
     response = urllib.urlopen(url)
     data = json.loads(response.read())
 
+    #  If the Coord is not RUNNING or is in PREP, exit as specified.
+
+    if data['status'] == 'PREP':
+        print "WARNING: Coordinator is PREP"
+        sys.exit(1)
+
+    if data['status'] != 'RUNNING':
+        print "CRITICAL: Coordinator is no longer running"
+        sys.exit(2)
+
     # Grab the actionNumber of the last action taken by the coordinator
     if data:
         lastActionNumber = data['actions'][-1]['actionNumber']
@@ -73,18 +85,13 @@ def main():
 
     # If there was previous data, only count a new action as bad.  Prevents constant alerts if last encountered action FAILED
     # Cycle through JSON looking for items that are NOT SUCCEEDED and count them
-    bad_action = 0
-    last_action_status = ""
-    if existing_coord:
-        for action in data['actions']:
-            last_action_status = action['status']
-            if (action['status'] not in accepted_status) and (existing_coord['lastActionNumber'] != lastActionNumber):
-                bad_action = bad_action + 1
-    else:
-        for action in data['actions']:
-            last_action_status = action['status']
-            if (action['status'] not in accepted_status):
-                bad_action = bad_action + 1
+    warning = None
+    ok = None
+    last_action_status = data['actions'][-1]['status']
+    if last_action_status in warn_status:
+        warning = 1
+    elif last_action_status in ok_status:
+        ok = 1
 
     # Append data back into previous data
     previous_data.append({ 'id' : coordID, 'lastActionNumber' : lastActionNumber })
@@ -94,16 +101,15 @@ def main():
         json.dump(previous_data, previous_file)
 
     # Exit as either CRITICAL, WARNING, or OK
-    if options.critical <= bad_action:
-        print "CRITICAL: " + options.host + " had " + str(bad_action) + " new, bad actions. Last action " + last_action_status
-        sys.exit(2)
-    elif options.warning <= bad_action:
-        print "WARNING: " + options.host + " had " + str(bad_action) + " new, bad actions.  Last action " + last_action_status
+    if warning == 1:
+        print "WARNING: " + options.host + " last action completed with " + last_action_status
         sys.exit(1)
-    else:
-        print "OK: " + options.host + " had " + str(bad_action) + " new, bad actions.  Last action " + last_action_status
+    elif ok == 1:
+        print "OK: " + options.host + " last action completed with " + last_action_status
         sys.exit(0)
-
+    else:
+        print "CRITICAL: " + options.host + " last action completed with " + last_action_status
+        sys.exit(2)
 
 if len(arguments) > 0:
     main()
